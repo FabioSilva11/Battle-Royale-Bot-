@@ -7,16 +7,10 @@ import schedule
 import time
 
 # Inicializa o bot com o token fictício fornecido pelo BotFather no Telegram
-bot = telebot.TeleBot('6397278735:AAEStFYysiaaHtCYlA5em5gOyFxaozxcCKI')
-
-# Token de acesso do Mercado Pago
-access_token = 'APP_USR-7593122838679417-040217-5818fb9652ed88031d5f8792d5d356d4-453190855'
+bot = telebot.TeleBot('6397278735')
 
 # Arquivo para armazenar os dados dos usuários
 USERS_FILE = 'usuarios.json'
-
-# Arquivo para armazenar os pagamentos
-PAYMENTS_FILE = 'payments.json'
 
 # Função para carregar os dados dos usuários do arquivo
 def load_users():
@@ -31,18 +25,7 @@ def save_users(users_data):
     with open(USERS_FILE, 'w') as file:
         json.dump(users_data, file)
 
-# Função para carregar os pagamentos do arquivo
-def load_payments():
-    try:
-        with open(PAYMENTS_FILE, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return {}
 
-# Função para salvar os pagamentos no arquivo
-def save_payments(payments):
-    with open(PAYMENTS_FILE, 'w') as file:
-        json.dump(payments, file)
 
 # Mensagem de boas-vindas do administrador
 welcome_message = (
@@ -85,57 +68,6 @@ def get_user_id_by_username(username):
         if user_info.get('user_name') == username:
             return user_info.get('user_id')
     return None  # Se o nome de usuário não for encontrado, retorne None
-
-# Função para remover os pagamentos expirados
-def remover_pagamentos_expirados():
-    payments = load_payments()
-    now = datetime.now()
-    payments = {user_id: payment for user_id, payment in payments.items() if datetime.strptime(payment["validade"], "%Y-%m-%dT%H:%M:%S.%fZ") > now}
-    save_payments(payments)
-
-# Agendar a execução da função a cada 5 minutos
-schedule.every(5).minutes.do(remover_pagamentos_expirados)
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
-
-# Função para criar um pagamento com validade de 24 horas
-def criar_pagamento(valor_da_transacao, descricao, destinatario, usuario_id):
-    mp = SDK(access_token)
-    
-    # Define a data de validade do pagamento para 24 horas a partir do momento atual
-    validade = datetime.now() + timedelta(hours=24)
-    
-    data = {
-        "transaction_amount": float(valor_da_transacao),
-        "description": descricao,
-        "payment_method_id": "pix",
-        "payer": {
-            "email": destinatario,
-            "first_name": destinatario
-        },
-        "expiration_date": validade.strftime("%Y-%m-%dT%H:%M:%S.%fZ")  # Formato ISO 8601
-    }
-
-    payment = mp.payment().create(data)
-    
-    if 'response' in payment:
-        response_data = payment['response']
-        payment_id = response_data['id']
-        payments = load_payments()
-        payments[usuario_id] = {
-            "payment_id": payment_id, 
-            "status": "pendente", 
-            "pix_copia_cola": response_data['point_of_interaction']['transaction_data']['qr_code'],
-            "id": usuario_id, 
-            "validade": validade.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        }
-        save_payments(payments)
-    else:
-        print("Chave 'response' não encontrada na resposta da API do Mercado Pago.")
-
-    return payment
 
 # Função para adicionar um usuário ao grupo
 def adicionar_usuario(group_id, user_id, full_name, last_name, user_name):
@@ -315,76 +247,6 @@ def handle_roubar(message):
 
         # Salvando os dados atualizados no arquivo
         save_users(users_data)
-
-# Comando /pagar para gerar um pagamento e verificar pendências
-@bot.message_handler(commands=['pagar'])
-def cmd_pagar(message):
-    if message.chat.type == "private":
-        valor = 2.0
-        descricao = "pagamento para atualização de status"
-        destinatario = "exemplo@email.com"
-        usuario_id = message.from_user.id
-
-        payments = load_payments()
-        if usuario_id in payments:
-            validade = datetime.strptime(payments[usuario_id]["validade"], "%Y-%m-%dT%H:%M:%S.%fZ")
-            if datetime.now() <= validade:
-                # Se o pagamento está dentro do prazo de validade, reenvie o código de pagamento
-                pix_copia_cola = payments[usuario_id]["pix_copia_cola"]
-                tempo_restante = validade - datetime.now()
-                tempo_restante_str = str(tempo_restante).split(".")[0]
-                bot.send_message(message.chat.id, f"Você já tem um pagamento em aberto.\nCódigo PIX para o pagamento: ```{pix_copia_cola}```\nTempo restante para pagamento: {tempo_restante_str}", parse_mode='MarkdownV2')
-            else:
-                # Se o pagamento expirou, criar um novo pagamento
-                response = criar_pagamento(valor, descricao, destinatario, usuario_id)
-                if 'response' in response and 'point_of_interaction' in response['response']:
-                    pix_copia_cola = response['response']['point_of_interaction']['transaction_data']['qr_code']
-                    payments[usuario_id]["pix_copia_cola"] = pix_copia_cola
-                    save_payments(payments)
-                    texto_explicativo = "Para atualizar os status do jogo, basta realizar o pagamento. Em um prazo de até 5 minutos, os dados serão atualizados no jogo. Abaixo, você encontrará o código PIX para facilitar a transação. Simplesmente copie e cole para concluir o processo."
-                    bot.send_message(message.chat.id, f"<b>{texto_explicativo}</b>", parse_mode='HTML')
-                    bot.send_message(message.chat.id, f"```{pix_copia_cola}```", parse_mode='MarkdownV2')
-                else:
-                    bot.send_message(message.chat.id, "Erro ao processar o pagamento. Tente novamente mais tarde.")
-        else:
-            # Se não há pagamento em aberto, criar um novo pagamento
-            response = criar_pagamento(valor, descricao, destinatario, usuario_id)
-            if 'response' in response and 'point_of_interaction' in response['response']:
-                pix_copia_cola = response['response']['point_of_interaction']['transaction_data']['qr_code']
-                payments[usuario_id] = {"payment_id": response['response']['id'], "status": "pendente", "validade": validade.strftime("%Y-%m-%dT%H:%M:%S.%fZ"), "pix_copia_cola": pix_copia_cola}
-                save_payments(payments)
-                texto_explicativo = "Para atualizar os status do jogo, basta realizar o pagamento. Em um prazo de até 5 minutos, os dados serão atualizados no jogo. Abaixo, você encontrará o código PIX para facilitar a transação. Simplesmente copie e cole para concluir o processo."
-                bot.send_message(message.chat.id, f"<b>{texto_explicativo}</b>", parse_mode='HTML')
-                bot.send_message(message.chat.id, f"```{pix_copia_cola}```", parse_mode='MarkdownV2')
-            else:
-                bot.send_message(message.chat.id, "Erro ao processar o pagamento. Tente novamente mais tarde.")
-    else:
-        bot.reply_to(message, "Este comando só pode ser usado em mensagens privadas.")
-
-# Comando /atualizar para verificar se o pagamento foi aprovado e verificar pendências
-@bot.message_handler(commands=['atualizar'])
-def cmd_atualizar(message):
-    if message.chat.type == "private":
-        usuario_id = message.from_user.id
-        payments = load_payments()
-        if usuario_id in payments:
-            validade = datetime.strptime(payments[usuario_id]["validade"], "%Y-%m-%dT%H:%M:%S.%fZ")
-            if datetime.now() <= validade:
-                payment_id = payments[usuario_id]["payment_id"]
-                mp = SDK(access_token)
-                payment_info = mp.payment().get(payment_id)
-                if 'status' in payment_info and payment_info['status'] == 'approved':
-                    payments[usuario_id]["status"] = "aprovado"
-                    save_payments(payments)
-                    bot.send_message(message.chat.id, "Pagamento aprovado.")
-                else:
-                    bot.send_message(message.chat.id, "Pagamento pendente ou não aprovado ainda.")
-            else:
-                bot.send_message(message.chat.id, "Pagamento expirado. Por favor, crie um novo pagamento.")
-        else:
-            bot.send_message(message.chat.id, "Nenhum pagamento em aberto encontrado.")
-    else:
-        bot.reply_to(message, "Este comando só pode ser usado em mensagens privadas.")
 
 # Inicia o bot
 bot.polling()
