@@ -43,8 +43,8 @@ Contribuições são bem-vindas! Sinta-se à vontade para abrir problemas (issue
 
 ## Autor
 
-Este bot foi desenvolvido por [Seu Nome](https://github.com/seu-usuario).
+Este bot foi desenvolvido por [fabio silva (kirito)](https://github.com/FabioSilva11).
 
 ---
 
-Espero que isso ajude a explicar melhor o funcionamento do jogo para os jogadores!
+Espero que isso ajude a explicar melhor o funcionamento do jogo para os jogadores! e para todos que desejam transformai isso em uma coisa maior.
