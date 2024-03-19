@@ -2,6 +2,12 @@
 
 Este é um bot para Telegram que simula um jogo estilo Battle Royale, onde os usuários podem interagir entre si, roubar moedas e se proteger com escudos. O bot foi desenvolvido em Python utilizando a biblioteca `telebot`.
 
+![Screenshot do jogo](https://raw.githubusercontent.com/FabioSilva11/Battle-Royale-Bot-/main/Print1.jpg)
+
+
+<img src="https://raw.githubusercontent.com/FabioSilva11/Battle-Royale-Bot-/main/Print2.jpg" alt="Screenshot do jogo" width="400"/>
+
+
 ## Funcionalidades
 
 - **Boas-vindas:** Ao ingressar no grupo, os novos membros recebem uma mensagem de boas-vindas personalizada, com instruções sobre o jogo e benefícios iniciais.
