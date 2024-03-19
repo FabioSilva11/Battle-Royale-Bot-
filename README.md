@@ -5,7 +5,7 @@ Este é um bot para Telegram que simula um jogo estilo Battle Royale, onde os us
 ![Screenshot do jogo](https://raw.githubusercontent.com/FabioSilva11/Battle-Royale-Bot-/main/Print1.jpg)
 
 
-<img src="https://raw.githubusercontent.com/FabioSilva11/Battle-Royale-Bot-/main/Print2.jpg" alt="Screenshot do jogo" width="400"/>
+![Screenshot do jogo](https://raw.githubusercontent.com/FabioSilva11/Battle-Royale-Bot-/main/Print2.jpg)
 
 
 ## Funcionalidades
